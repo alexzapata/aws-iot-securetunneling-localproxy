@@ -100,7 +100,7 @@ jobs:
           7z x boost.zip
           cd boost_1_87_0
           call bootstrap.bat
-          .\b2 toolset=msvc address-model=64 install define=BOOST_USE_WINAPI_VERSION=0x0A00
+          .\b2 toolset=msvc address-model=64 --with-system --with-filesystem --with-date_time --with-program_options --with-log --with-thread --with-chrono install define=BOOST_USE_WINAPI_VERSION=0x0A00
 
       - name: Build localproxy
         shell: cmd
