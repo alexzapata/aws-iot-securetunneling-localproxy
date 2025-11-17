@@ -1,0 +1,133 @@
+name: Build Windows Binary
+
+on:
+  workflow_dispatch:  # Manual trigger
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/build-windows.yml'
+
+jobs:
+  build:
+    runs-on: windows-2022
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup build environment
+        shell: pwsh
+        run: |
+          # Install NASM (required for OpenSSL)
+          choco install nasm -y
+          echo "C:\Program Files\NASM" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        id: cache-deps
+        with:
+          path: |
+            C:\Boost
+            C:\Program Files (x86)\zlib
+            C:\Program Files\OpenSSL
+            C:\Program Files (x86)\Catch2
+            C:\Program Files (x86)\protobuf
+          key: windows-deps-v3-boost1870-openssl111-proto3173
+
+      - name: Build zlib
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          cd %GITHUB_WORKSPACE%
+          git clone -b v1.2.13 https://github.com/madler/zlib.git
+          cd zlib
+          mkdir build
+          cd build
+          cmake -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release ..
+          nmake
+          nmake install
+
+      - name: Build OpenSSL
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          set PATH=C:\Program Files\NASM;%PATH%
+          cd %GITHUB_WORKSPACE%
+          git clone https://github.com/openssl/openssl.git
+          cd openssl
+          git checkout OpenSSL_1_1_1-stable
+          perl Configure VC-WIN64A
+          nmake
+          nmake install
+
+      - name: Build Catch2
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          cd %GITHUB_WORKSPACE%
+          git clone --branch v3.7.0 https://github.com/catchorg/Catch2.git
+          cd Catch2
+          mkdir build
+          cd build
+          cmake -DBUILD_TESTING=OFF -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release ..
+          nmake
+          nmake install
+
+      - name: Build Protocol Buffers
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          cd %GITHUB_WORKSPACE%
+          curl -L -o protobuf.tar.gz https://github.com/protocolbuffers/protobuf/releases/download/v3.17.3/protobuf-all-3.17.3.tar.gz
+          tar -xzf protobuf.tar.gz
+          cd protobuf-3.17.3\cmake
+          mkdir build
+          cd build
+          cmake -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release -Dprotobuf_MSVC_STATIC_RUNTIME=OFF ..
+          nmake
+          nmake install
+
+      - name: Build Boost
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          cd %GITHUB_WORKSPACE%
+          curl -L -o boost.zip https://boostorg.jfrog.io/artifactory/main/release/1.87.0/source/boost_1_87_0.zip
+          7z x boost.zip
+          cd boost_1_87_0
+          call bootstrap.bat
+          .\b2 toolset=msvc address-model=64 --with-system --with-filesystem --with-date_time --with-program_options --with-log --with-thread install define=BOOST_USE_WINAPI_VERSION=0x0A00
+
+      - name: Build localproxy
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          cd %GITHUB_WORKSPACE%
+          mkdir build
+          cd build
+          cmake -DWIN32_WINNT=0x0A00 -DBoost_USE_STATIC_LIBS=ON -DCMAKE_PREFIX_PATH="C:\Boost;C:\Program Files (x86)\Catch2;C:\Program Files (x86)\protobuf;C:\Program Files\OpenSSL" -G "Visual Studio 17 2022" -A x64 ..
+          msbuild localproxy.vcxproj -p:Configuration=Release
+
+      - name: Verify build
+        shell: pwsh
+        run: |
+          $exe = "build\bin\Release\localproxy.exe"
+          if (Test-Path $exe) {
+            Write-Host "Build successful!"
+            Write-Host "File size: $((Get-Item $exe).Length / 1MB) MB"
+            & $exe --version
+          } else {
+            Write-Host "Build failed - executable not found"
+            exit 1
+          }
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: localproxy-windows-x64
+          path: build/bin/Release/localproxy.exe
+          retention-days: 30
