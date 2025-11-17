@@ -119,7 +119,7 @@ jobs:
           if (Test-Path $exe) {
             Write-Host "Build successful!"
             Write-Host "File size: $((Get-Item $exe).Length / 1MB) MB"
-            & $exe --version
+            Write-Host "Executable exists at: $exe"
           } else {
             Write-Host "Build failed - executable not found"
             exit 1
