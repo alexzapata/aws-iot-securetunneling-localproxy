@@ -31,7 +31,7 @@ jobs:
             C:\Program Files\OpenSSL
             C:\Program Files (x86)\Catch2
             C:\Program Files (x86)\protobuf
-          key: windows-deps-v4-boost1860-openssl111-proto3173
+          key: windows-deps-v5-boost1870-openssl111-proto3173
 
       - name: Build zlib
         if: steps.cache-deps.outputs.cache-hit != 'true'
@@ -96,11 +96,11 @@ jobs:
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
           cd %GITHUB_WORKSPACE%
-          curl -L -o boost.tar.gz https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-b2-nodocs.tar.gz
-          tar -xzf boost.tar.gz
-          cd boost-1.86.0
+          curl -L -o boost.zip https://archives.boost.io/release/1.87.0/source/boost_1_87_0.zip
+          7z x boost.zip
+          cd boost_1_87_0
           call bootstrap.bat
-          .\b2 toolset=msvc address-model=64 --with-system --with-filesystem --with-date_time --with-program_options --with-log --with-thread install define=BOOST_USE_WINAPI_VERSION=0x0A00
+          .\b2 toolset=msvc address-model=64 install define=BOOST_USE_WINAPI_VERSION=0x0A00
 
       - name: Build localproxy
         shell: cmd
