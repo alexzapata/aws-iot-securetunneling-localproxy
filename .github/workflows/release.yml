@@ -3,11 +3,7 @@ name: Release Image Builds
 # This workflow is to allow the building of Docker release images by copying the binary from a base image to a minimum size OS image.
 
 on:
-  push:
-    branches: ['main', 'docker-builds']
-  pull_request:
-    branches: ['main', 'docker-builds']
-    types: [opened, closed]
+  workflow_dispatch:  # Manual trigger only
 
 env:
   PACKAGE_NAME: aws-iot-securetunneling-localproxy

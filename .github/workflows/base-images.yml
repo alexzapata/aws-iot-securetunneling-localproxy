@@ -6,11 +6,7 @@ name: Base Image Builds
 # only when needed. This cuts the time needed for typical workflow runs significantly.
 
 on:
-  push:
-    branches: ['base-images', 'docker-builds']
-  pull_request:
-    branches: ['base-images', 'docker-builds']
-    types: [opened, closed]
+  workflow_dispatch:  # Manual trigger only
 
 env:
   PACKAGE_NAME: aws-iot-securetunneling-localproxy

@@ -1,6 +1,7 @@
 name: GitHub Issue notifications
 
-on: [issue_comment,issues]
+on:
+  workflow_dispatch:  # Manual trigger only
 
 
 permissions:
