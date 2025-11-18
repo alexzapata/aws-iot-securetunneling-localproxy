@@ -57,7 +57,6 @@ jobs:
           path: ${{ github.workspace }}/build/bin/localproxy
   ubuntu:
     runs-on: ubuntu-latest
-    if: (github.event_name == 'push') || ((github.event_name == 'pull_request') && (github.event.pull_request.head.repo.full_name != github.repository))
     steps:
       - name: 'Checkout'
         uses: actions/checkout@v3
@@ -114,7 +113,6 @@ jobs:
           path: ${{ github.workspace }}/build/bin/localproxy
   windows:
     runs-on: windows-2022
-    if: (github.event_name == 'push') || ((github.event_name == 'pull_request') && (github.event.pull_request.head.repo.full_name != github.repository))
     steps:
       - name: Setup developer command prompt
         uses: ilammy/msvc-dev-cmd@v1
